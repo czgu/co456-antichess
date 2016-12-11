@@ -6,7 +6,7 @@ MACCC=clang++
 LINUXFLAGS=-Wall -std=c++11 -pthread
 MACFLAGS=-Wall -std=c++11 -stdlib=libc++
 
-FILES=main board
+FILES=main board search player
 SOURCES=$(FILES:=.cpp)
 OBJECTS=$(FILES:=.o)
 EXECUTABLES=chess
