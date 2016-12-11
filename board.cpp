@@ -33,8 +33,13 @@ bool vec2::within() {
     return false;
 }
 
+UnMove::UnMove(vec2 start, vec2 end, short moveType, ChessPieceType removedPiece)
+: start(start), end(end), moveType(moveType), removed(removedPiece)
+{}
+
 Move::Move(vec2 start, vec2 end) : start(start), end(end) {
-    moveType = -1;
+    moveType = 0;
+    promotion = EMPTY;
 }
 
 Move::Move(vec2 start, vec2 end, short moveType) : start(start), end(end), moveType(moveType) {
@@ -157,7 +162,7 @@ void ChessBoard::genPieceMove(std::vector<Move>& moves, vec2 p) {
 
             int side = white ? 0 : 1;
             int num = p.x == 0 ? 0 : 1;
-            if (castling[side][num]) {
+            if (meta.castling[side][num]) {
                 // check empty
                 int x = num == 0 ? 1 : 6;
                 int y = white ? 0 : 7;
@@ -204,10 +209,10 @@ void ChessBoard::genPieceMove(std::vector<Move>& moves, vec2 p) {
             genPieceDirectedMove(moves, p, d, true);
 
             int ep = white ? 1 : 0; // Check enemy's en passant status
-            if (enPassant[ep] >= 0 && ((white && p.y == 4) || (!white && p.y == 3))) {
-                if (p.x + 1 == enPassant[ep] || p.x - 1 == enPassant[ep]) {
+            if (meta.enPassant[ep] >= 0 && ((white && p.y == 4) || (!white && p.y == 3))) {
+                if (p.x + 1 == meta.enPassant[ep] || p.x - 1 == meta.enPassant[ep]) {
                     int y = white ? 5 : 2;
-                    moves.push_back(Move(vec2(p.x, p.y), vec2(enPassant[ep], y), ENPASSANT | CAPTURE));
+                    moves.push_back(Move(vec2(p.x, p.y), vec2(meta.enPassant[ep], y), ENPASSANT | CAPTURE));
                 }
             }
             // Side moves
@@ -285,16 +290,16 @@ ChessBoard::ChessBoard() {
     }
 
     white = true;
-    castling[0][0] = true;
-    castling[0][1] = true;
-    castling[1][0] = true;
-    castling[1][1] = true;
+    meta.castling[0][0] = true;
+    meta.castling[0][1] = true;
+    meta.castling[1][0] = true;
+    meta.castling[1][1] = true;
 
-    checkMate[0] = false;
-    checkMate[1] = false;
+    meta.checkMate[0] = false;
+    meta.checkMate[1] = false;
 
-    enPassant[0] = -1;
-    enPassant[1] = -1;
+    meta.enPassant[0] = -1;
+    meta.enPassant[1] = -1;
 }
 
 vector<Move> ChessBoard::genMoves() {
@@ -352,24 +357,27 @@ void ChessBoard::identifyMoveType(Move& m) {
 }
 
 void ChessBoard::move(Move m) {
+    previousMeta.push_back(meta);
+
     if (m.moveType == 0) {
         identifyMoveType(m);
     }
 
     ChessPiece* start = board[m.start.x][m.start.y];
     ChessPiece* end = board[m.end.x][m.end.y];
+    ChessPieceType removedPieceType = EMPTY;
 
     int side = white ? 0 : 1;
-    enPassant[side] = -1; // reinitialize enpassant
+    meta.enPassant[side] = -1; // reinitialize enpassant
 
     if (start->type == KING) { // Once king moves, cannot do castling any more
-        castling[side][0] = false;
-        castling[side][1] = false;
+        meta.castling[side][0] = false;
+        meta.castling[side][1] = false;
     } else if (start->type == CASTLE && (m.start.x == 0 || m.start.x == 7)) {
         // Once castle move, cannot do castling any more
         if ((white && m.start.y == 0) || (!white && m.start.y == 7)) {
             int side_x = m.start.x == 0 ? 0 : 1;
-            castling[side][side_x] = false;
+            meta.castling[side][side_x] = false;
         }
     }
 
@@ -380,8 +388,10 @@ void ChessBoard::move(Move m) {
             ChessPiece* pawn = board[m.end.x][m.start.y]; // neighbor piece
 
             board[m.end.x][m.start.y] = 0;
+            removedPieceType = PAWN;
             delete pawn;
         } else { // Normal capture
+            removedPieceType = end->type;
             delete end;
         }
     } else if (m.moveType & CASTLING) { // Castling
@@ -396,7 +406,7 @@ void ChessBoard::move(Move m) {
 
     if (start->type == PAWN) {
         if (abs(m.start.y - m.end.y) > 1) { // allowing for enPassant
-            enPassant[side] = m.end.x;
+            meta.enPassant[side] = m.end.x;
         } else if (m.moveType & PROMOTION) {
             start->type = m.promotion;
         }
@@ -405,6 +415,52 @@ void ChessBoard::move(Move m) {
     board[m.end.x][m.end.y] = start;
 
     white = !white;
+
+    previousMoves.push_back(UnMove(
+        m.start,
+        m.end,
+        m.moveType,
+        removedPieceType));
+}
+
+void ChessBoard::unmove() {
+    if (previousMoves.size() == 0) {
+        return; // Cannot unmove
+    }
+
+    meta = previousMeta.back();
+    UnMove m = previousMoves.back();
+    white = !white;
+
+    ChessPiece* start = board[m.start.x][m.start.y];
+    ChessPiece* end = board[m.end.x][m.end.y];
+
+    if (start != 0) {
+        // TODO:ASSERT
+        cout << "WTF" << endl;
+    }
+
+    board[m.end.x][m.end.y] = 0;
+    board[m.start.x][m.start.y] = end;
+
+    if (m.moveType & ENPASSANT) {
+        int y = m.end.y == 2 ? 3 : 4;
+        board[m.end.x][y] = new ChessPiece(m.removed, !white);
+    } else if (m.moveType & CAPTURE) {
+        board[m.end.x][m.end.y] = new ChessPiece(m.removed, !white);
+    } else if (m.moveType & CASTLING) {
+        int beginx = m.end.x < m.start.x ? 3 : 5;
+        int endx = m.end.x < m.start.x ? 0 : 7;
+        board[beginx][m.end.y] = board[endx][m.end.y];
+        board[endx][m.end.y] = 0;
+    }
+
+    if (m.moveType & PROMOTION) {
+        end->type = PAWN; // unpromote
+    }
+
+    previousMeta.pop_back();
+    previousMoves.pop_back();
 }
 
 void ChessBoard::print() {

@@ -55,11 +55,10 @@ struct Move {
 struct UnMove {
     vec2 start;
     vec2 end;
-    // 1: Capture
-    // 2: 
     short moveType;
 
-    UnMove(vec2 start, vec2 end);
+    ChessPieceType removed;
+    UnMove(vec2 start, vec2 end, short moveType, ChessPieceType removedPiece);
 };
 
 struct ChessPiece {
@@ -71,11 +70,18 @@ struct ChessPiece {
     char toString();
 };
 
+struct MetaChessBoard {
+    bool castling[2][2];
+    bool checkMate[2];
+    short enPassant[2];
+};
+
 class ChessBoard {
 public:
     ChessBoard();
     std::vector<Move> genMoves();
     void move(Move m);
+    void unmove();
     void print();
 
     void identifyMoveType(Move& m);
@@ -83,10 +89,11 @@ private:
     void genPieceMove(std::vector<Move>& moves, vec2 p);
     void genPieceDirectedMove(std::vector<Move>& moves, vec2 from, vec2 d, bool multi);
 
-    bool castling[2][2];
-    bool checkMate[2];
-    short enPassant[2];
-
     bool white;
+    MetaChessBoard meta;
     ChessPiece* board[8][8];
+
+    std::vector<UnMove> previousMoves;
+    std::vector<MetaChessBoard> previousMeta;
+
 };

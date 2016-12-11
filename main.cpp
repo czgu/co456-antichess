@@ -15,7 +15,35 @@ Move parseString(string in) {
 
     vec2 v_start(s_start_x, s_start[1] - '1');
     vec2 v_end(s_end_x, s_end[1] - '1');
-    return Move(v_start, v_end);
+
+    Move m(v_start, v_end);
+    if (in.length() > 4) {
+        ChessPieceType type = EMPTY;
+
+        char c = in[4];
+        c = c >= 'A' ? c - 'A' + 'a' : c;
+
+        switch (c) {
+            case 'q':
+                type = QUEEN;
+                break;
+            case 'r':
+                type = CASTLE;
+                break;
+            case 'b':
+                type = BISHOP;
+                break;
+            case 'n':
+                type = KNIGHT;
+                break;
+            default:
+                break;
+        }
+
+        m.promotion = EMPTY;
+    }
+
+    return m;
 }
 
 int main() {
@@ -27,17 +55,22 @@ int main() {
     Player ai(white, &board);
     Player ai2(!white, &board);
     while (true) {
-        if (white) {
-            Move aiMove = ai.makeMove();
-            cout << aiMove.toString() << " " << aiMove.moveType <<  std::endl;
-        } else {
-            Move aiMove = ai2.makeMove();
-            cout << aiMove.toString() << " " << aiMove.moveType <<  std::endl;
+        cin >> s;
+        if (s == "b") {
+            cout << "UnMove" << endl;
+            board.unmove();
+            // board.print();
+        } else if (s == "n") {
+            if (white) {
+                Move aiMove = ai.makeMove();
+                cout << aiMove.toString() << std::endl;
+            } else {
+                Move aiMove = ai2.makeMove();
+                cout << aiMove.toString() << std::endl;
+            }
+            board.print();
+            white = !white;
         }
-        board.print();
-        white = !white;
-
-        getchar();
     }
 
 
