@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstdio>
 #include <string>
 #include "board.hpp"
 #include "player.hpp"
@@ -17,17 +18,6 @@ Move parseString(string in) {
     return Move(v_start, v_end);
 }
 
-string parseMove(Move m) {
-    char ret[4];
-
-    ret[0] = m.start.x + 'a';
-    ret[1] = m.start.y + '1';
-    ret[2] = m.end.x + 'a';
-    ret[3] = m.end.y + '1';
-
-    return string(ret);
-}
-
 int main() {
     string s;
     cin >> s;
@@ -35,10 +25,21 @@ int main() {
     bool white = s == "white";
     ChessBoard board;
     Player ai(white, &board);
+    Player ai2(!white, &board);
+    while (true) {
+        if (white) {
+            Move aiMove = ai.makeMove();
+            cout << aiMove.toString() << " " << aiMove.moveType <<  std::endl;
+        } else {
+            Move aiMove = ai2.makeMove();
+            cout << aiMove.toString() << " " << aiMove.moveType <<  std::endl;
+        }
+        board.print();
+        white = !white;
 
-    if (white) {
-        ai.makeMove();
+        getchar();
     }
+
 
     while (true) {
         cin >> s;
@@ -52,7 +53,7 @@ int main() {
             board.move(playerMove);
 
             Move aiMove = ai.makeMove();
-            cout << parseMove(aiMove) << std::endl;
+            cout << aiMove.toString() << std::endl;
         }
     }
 }

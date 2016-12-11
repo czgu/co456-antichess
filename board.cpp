@@ -1,5 +1,6 @@
 #include "board.hpp"
 #include <iostream>
+#include <cmath>
 
 using namespace std;
 
@@ -32,92 +33,191 @@ bool vec2::within() {
     return false;
 }
 
-Move::Move(vec2 start, vec2 end) : start(start), end(end) {}
+Move::Move(vec2 start, vec2 end) : start(start), end(end) {
+    moveType = -1;
+}
 
-void ChessPiece::genPieceDirectedMove(std::vector<Move>& moves, ChessPiece* board[8][8], vec2 from, vec2 d, bool multi) {
+Move::Move(vec2 start, vec2 end, short moveType) : start(start), end(end), moveType(moveType) {
+    if (moveType == 4) {
+        promotion = QUEEN;
+    }
+}
+
+string Move::toString() {
+    string ret = "";
+
+    ret += start.x + 'a';
+    ret += start.y + '1';
+    ret += end.x + 'a';
+    ret += end.y + '1';
+
+    return ret;
+}
+
+void ChessBoard::genPieceDirectedMove(std::vector<Move>& moves, vec2 from, vec2 d, bool multi) {
+    ChessPieceType type = board[from.x][from.y]->type;
+    vec2 dir = d;
     do {
-        vec2 to = from.add(d);
+        vec2 to = from.add(dir);
 
-        if (!to.within()) {
+        if (!to.within()) { // Out of bounds
             break;
         }
+
+        short moveType = 0;
 
         ChessPiece* cp = board[to.x][to.y];
-        if (cp != 0 && cp->white == this->white) {
+        if (cp != 0) {
+            if (cp->white == this->white) { // Can't move to friendly
+                break;
+            }
+            moveType = CAPTURE; // Capture
+        } else {
+            moveType = QUIET;
+        }
+
+        if (type == PAWN) {
+            if (cp != 0 && dir.x == 0) // Cannot move straight if there is an piece
+                break;
+
+            if (cp == 0 && dir.x != 0) // Cannot move diagonal if there is no piece
+                break;
+
+            if (multi && abs(dir.y) >= 2) { // Second pawn move
+                // Invalid for second pawn move
+                if ((white && from.y > 1) || (!white && from.y < 6) || abs(dir.y) > 2)
+                    break;
+            }
+
+            // Pawn Promotion
+            if ((white && to.y == 7) || (!white && to.y == 0)) {
+                moveType |= PROMOTION;
+            }
+        }
+
+        Move m(from, to, moveType);
+        if ((moveType & PROMOTION) != 0) {
+            m.promotion = QUEEN;
+        }
+
+        moves.push_back(m);
+
+        if (cp != 0) { // Caputre Move
             break;
         }
 
-        moves.push_back(Move(from, to));
-
-        d = d.add(d);
+        dir = dir.add(d);
     } while (multi);
 }
 
-void ChessPiece::genPieceMove(vector<Move>& moves, ChessPiece* board[8][8], vec2 p) {
+void ChessBoard::genPieceMove(std::vector<Move>& moves, vec2 p) {
     vec2 d(0, 0);
+    ChessPieceType type = board[p.x][p.y]->type;
 
     switch(type) {
-        case KING:
+        case KING: {
              for (int sign = 0; sign < 2; sign ++) {
                 d.set(1, 0); if (sign) d.neg();
-                genPieceDirectedMove(moves, board, p, d, false);
+                genPieceDirectedMove(moves, p, d, false);
                 d.set(0, 1); if (sign) d.neg();
-                genPieceDirectedMove(moves, board, p, d, false);
+                genPieceDirectedMove(moves, p, d, false);
                 d.set(1, 1); if (sign) d.neg();
-                genPieceDirectedMove(moves, board, p, d, false);
+                genPieceDirectedMove(moves, p, d, false);
                 d.set(-1, 1); if (sign) d.neg();
-                genPieceDirectedMove(moves, board, p, d, false);
+                genPieceDirectedMove(moves, p, d, false);
             }
             break;
+        }
         case QUEEN:
             for (int sign = 0; sign < 2; sign ++) {
                 d.set(1, 0); if (sign) d.neg();
-                genPieceDirectedMove(moves, board, p, d, true);
+                genPieceDirectedMove(moves, p, d, true);
                 d.set(0, 1); if (sign) d.neg();
-                genPieceDirectedMove(moves, board, p, d, true);
+                genPieceDirectedMove(moves, p, d, true);
                 d.set(1, 1); if (sign) d.neg();
-                genPieceDirectedMove(moves, board, p, d, true);
+                genPieceDirectedMove(moves, p, d, true);
                 d.set(-1, 1); if (sign) d.neg();
-                genPieceDirectedMove(moves, board, p, d, true);
+                genPieceDirectedMove(moves, p, d, true);
             }
             break;
-        case CASTLE:
+        case CASTLE: {
             for (int sign = 0; sign < 2; sign ++) {
                 d.set(1, 0); if (sign) d.neg();
-                genPieceDirectedMove(moves, board, p, d, true);
+                genPieceDirectedMove(moves, p, d, true);
                 d.set(0, 1); if (sign) d.neg();
-                genPieceDirectedMove(moves, board, p, d, true);
+                genPieceDirectedMove(moves, p, d, true);
+            }
+
+            if ((white && p.y != 0) || (!white && p.y != 7)) {
+                break;
+            }
+            if (p.x != 0 || p.x != 7) {
+                break;
+            }
+
+            int side = white ? 0 : 1;
+            int num = p.x == 0 ? 0 : 1;
+            if (castling[side][num]) {
+                // check empty
+                int x = num == 0 ? 1 : 6;
+                int y = white ? 0 : 7;
+                int incre = x == 1 ? 1 : -1;
+                bool canCastling = true;
+                while (x != 4) {
+                    if (board[x][y] != 0) {
+                        canCastling = false;
+                        break;
+                    }
+                    x += incre;
+                }
+
+                if (canCastling) {
+                    moves.push_back(Move(vec2(4, p.y), vec2(num == 0 ? 2 : 6 ,p.y), CASTLING));
+                }
             }
             break;
-        case BISHOP:
+        }
+        case BISHOP: {
             for (int sign = 0; sign < 2; sign ++) {
                 d.set(1, 1); if (sign) d.neg();
-                genPieceDirectedMove(moves, board, p, d, true);
+                genPieceDirectedMove(moves, p, d, true);
                 d.set(-1, 1); if (sign) d.neg();
-                genPieceDirectedMove(moves, board, p, d, true);
+                genPieceDirectedMove(moves, p, d, true);
             }
             break;
-        case KNIGHT:
+        }
+        case KNIGHT: {
             for (int sign = 0; sign < 2; sign++) {
                 d.set(2, 1); if (sign) d.neg();
-                genPieceDirectedMove(moves, board, p, d, false);
+                genPieceDirectedMove(moves, p, d, false);
                 d.set(1, 2); if (sign) d.neg();
-                genPieceDirectedMove(moves, board, p, d, false);
+                genPieceDirectedMove(moves, p, d, false);
                 d.set(-2, 1); if (sign) d.neg();
-                genPieceDirectedMove(moves, board, p, d, false);
+                genPieceDirectedMove(moves, p, d, false);
                 d.set(-1, 2); if (sign) d.neg();
-                genPieceDirectedMove(moves, board, p, d, false);
+                genPieceDirectedMove(moves, p, d, false);
             }
             break;
-        case PAWN:
-            d.set(0, 1);
+        }
+        case PAWN: {
+            d.set(0, white ? 1 : -1);
+            genPieceDirectedMove(moves, p, d, true);
 
-            if (!white) {
-                d.neg();
+            int ep = white ? 1 : 0; // Check enemy's en passant status
+            if (enPassant[ep] >= 0 && ((white && p.y == 4) || (!white && p.y == 3))) {
+                if (p.x + 1 == enPassant[ep] || p.x - 1 == enPassant[ep]) {
+                    int y = white ? 5 : 2;
+                    moves.push_back(Move(vec2(p.x, p.y), vec2(enPassant[ep], y), ENPASSANT | CAPTURE));
+                }
             }
+            // Side moves
+            d.set(1, d.y);
+            genPieceDirectedMove(moves, p, d, false);
+            d.set(-1, d.y);
+            genPieceDirectedMove(moves, p, d, false);
 
-            genPieceDirectedMove(moves, board, p, d, false);
             break;
+        }
         default:
             break;
     }
@@ -184,7 +284,17 @@ ChessBoard::ChessBoard() {
         board[i][6] = new ChessPiece(PAWN, false);
     }
 
-    whiteTurn = true;
+    white = true;
+    castling[0][0] = true;
+    castling[0][1] = true;
+    castling[1][0] = true;
+    castling[1][1] = true;
+
+    checkMate[0] = false;
+    checkMate[1] = false;
+
+    enPassant[0] = -1;
+    enPassant[1] = -1;
 }
 
 vector<Move> ChessBoard::genMoves() {
@@ -192,26 +302,109 @@ vector<Move> ChessBoard::genMoves() {
 
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
-            if (board[i][j] != NULL && whiteTurn == board[i][j]->white) {
-                board[i][j]->genPieceMove(ret, board, vec2(i, j));
+            if (board[i][j] != NULL && white == board[i][j]->white) {
+                genPieceMove(ret, vec2(i, j));
             }
         }
+    }
+
+    vector<Move> captureMoves;
+    for (Move& m : ret) {
+        if (m.moveType & CAPTURE) {
+            captureMoves.push_back(m);
+        }
+    }
+    if (captureMoves.size() > 0) {
+        ret = captureMoves;
     }
 
     return ret;
 }
 
-void ChessBoard::move(Move m) {
+void ChessBoard::identifyMoveType(Move& m) {
+    short moveType = 0;
+
     ChessPiece* start = board[m.start.x][m.start.y];
     ChessPiece* end = board[m.end.x][m.end.y];
 
-    board[m.start.x][m.start.y] = 0;
-    if (end != 0) { // Quiet move
-        delete end;
+    if (end == 0) {
+        moveType |= QUIET;
+    } else {
+        moveType |= CAPTURE;
     }
+
+    if (start->type == KING) {
+        if (abs(m.start.x - m.end.x) > 1) {
+            moveType |= CASTLING;
+        }
+    } else if (start->type == PAWN) {
+        if (end == 0 && m.start.x != m.end.x) { // EnPassant
+            moveType |= ENPASSANT;
+            moveType |= CAPTURE;
+            moveType &= ~QUIET;
+        }
+        if (m.end.y == 0 || m.end.y == 7) {
+            moveType |= PROMOTION;
+        }
+    }
+
+    m.moveType = moveType;
+}
+
+void ChessBoard::move(Move m) {
+    if (m.moveType == 0) {
+        identifyMoveType(m);
+    }
+
+    ChessPiece* start = board[m.start.x][m.start.y];
+    ChessPiece* end = board[m.end.x][m.end.y];
+
+    int side = white ? 0 : 1;
+    enPassant[side] = -1; // reinitialize enpassant
+
+    if (start->type == KING) { // Once king moves, cannot do castling any more
+        castling[side][0] = false;
+        castling[side][1] = false;
+    } else if (start->type == CASTLE && (m.start.x == 0 || m.start.x == 7)) {
+        // Once castle move, cannot do castling any more
+        if ((white && m.start.y == 0) || (!white && m.start.y == 7)) {
+            int side_x = m.start.x == 0 ? 0 : 1;
+            castling[side][side_x] = false;
+        }
+    }
+
+    board[m.start.x][m.start.y] = 0;
+    if (m.moveType & CAPTURE) { // Capture move
+        if (m.moveType & ENPASSANT) { // doing enPassant
+            // assert
+            ChessPiece* pawn = board[m.end.x][m.start.y]; // neighbor piece
+
+            board[m.end.x][m.start.y] = 0;
+            delete pawn;
+        } else { // Normal capture
+            delete end;
+        }
+    } else if (m.moveType & CASTLING) { // Castling
+        if (m.end.x == 2) {
+            board[3][m.start.y] = board[0][m.start.y];
+            board[0][m.start.y] = 0;
+        } else { // m.end.x == 6
+            board[5][m.start.y] = board[7][m.start.y];
+            board[7][m.start.y] = 0;
+        }
+    }
+
+    if (start->type == PAWN) {
+        if (abs(m.start.y - m.end.y) > 1) { // allowing for enPassant
+            enPassant[side] = m.end.x;
+        } else if (m.moveType & PROMOTION) {
+            start->type = m.promotion;
+        }
+    }
+
     board[m.end.x][m.end.y] = start;
 
-    whiteTurn = !whiteTurn;
+    white = !white;
 }
 
 void ChessBoard::print() {
