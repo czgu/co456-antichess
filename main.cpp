@@ -82,6 +82,8 @@ int main() {
             char command = s[1];
             if (command == 'p') {
                 board.print();
+            } else if (command == 'b') {
+                board.unmove();
             }
         } else {
             Move playerMove = parseString(s);
