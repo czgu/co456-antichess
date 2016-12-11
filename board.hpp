@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <string>
 
 struct vec2 {
     short x;
@@ -24,11 +25,40 @@ enum ChessPieceType {
     EMPTY
 };
 
+#define QUIET 0x1
+#define CAPTURE 0x2
+#define CASTLING 0x4
+#define ENPASSANT 0x8
+#define PROMOTION 0x10
+
 struct Move {
     vec2 start;
     vec2 end;
 
+    // BitMap
+    // 0 : Unknown
+    // 1 : Quiet
+    // 2 : Capture
+    // 3 : Castling
+    // 4 : EnPassant
+    // 5 : Promotion
+    short moveType;
+
+    ChessPieceType promotion;
+
     Move(vec2 start, vec2 end);
+    Move(vec2 start, vec2 end, short moveType);
+
+    std::string toString();
+};
+
+struct UnMove {
+    vec2 start;
+    vec2 end;
+    short moveType;
+
+    ChessPieceType removed;
+    UnMove(vec2 start, vec2 end, short moveType, ChessPieceType removedPiece);
 };
 
 struct ChessPiece {
@@ -37,9 +67,13 @@ struct ChessPiece {
 
     ChessPiece(ChessPieceType type, bool white);
 
-    void genPieceMove(std::vector<Move>& moves, ChessPiece* board[8][8], vec2 p);
-    void genPieceDirectedMove(std::vector<Move>& moves, ChessPiece* board[8][8], vec2 p, vec2 d, bool multi);
     char toString();
+};
+
+struct MetaChessBoard {
+    bool castling[2][2];
+    bool checkMate[2];
+    short enPassant[2];
 };
 
 class ChessBoard {
@@ -47,8 +81,19 @@ public:
     ChessBoard();
     std::vector<Move> genMoves();
     void move(Move m);
+    void unmove();
     void print();
+
+    void identifyMoveType(Move& m);
 private:
-    bool whiteTurn;
+    void genPieceMove(std::vector<Move>& moves, vec2 p);
+    void genPieceDirectedMove(std::vector<Move>& moves, vec2 from, vec2 d, bool multi);
+
+    bool white;
+    MetaChessBoard meta;
     ChessPiece* board[8][8];
+
+    std::vector<UnMove> previousMoves;
+    std::vector<MetaChessBoard> previousMeta;
+
 };

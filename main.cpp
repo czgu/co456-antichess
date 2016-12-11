@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstdio>
 #include <string>
 #include "board.hpp"
 #include "player.hpp"
@@ -14,18 +15,35 @@ Move parseString(string in) {
 
     vec2 v_start(s_start_x, s_start[1] - '1');
     vec2 v_end(s_end_x, s_end[1] - '1');
-    return Move(v_start, v_end);
-}
 
-string parseMove(Move m) {
-    char ret[4];
+    Move m(v_start, v_end);
+    if (in.length() > 4) {
+        ChessPieceType type = EMPTY;
 
-    ret[0] = m.start.x + 'a';
-    ret[1] = m.start.y + '1';
-    ret[2] = m.end.x + 'a';
-    ret[3] = m.end.y + '1';
+        char c = in[4];
+        c = c >= 'A' ? c - 'A' + 'a' : c;
 
-    return string(ret);
+        switch (c) {
+            case 'q':
+                type = QUEEN;
+                break;
+            case 'r':
+                type = CASTLE;
+                break;
+            case 'b':
+                type = BISHOP;
+                break;
+            case 'n':
+                type = KNIGHT;
+                break;
+            default:
+                break;
+        }
+
+        m.promotion = EMPTY;
+    }
+
+    return m;
 }
 
 int main() {
@@ -35,10 +53,26 @@ int main() {
     bool white = s == "white";
     ChessBoard board;
     Player ai(white, &board);
-
-    if (white) {
-        ai.makeMove();
+    Player ai2(!white, &board);
+    while (true) {
+        cin >> s;
+        if (s == "b") {
+            cout << "UnMove" << endl;
+            board.unmove();
+            // board.print();
+        } else if (s == "n") {
+            if (white) {
+                Move aiMove = ai.makeMove();
+                cout << aiMove.toString() << std::endl;
+            } else {
+                Move aiMove = ai2.makeMove();
+                cout << aiMove.toString() << std::endl;
+            }
+            board.print();
+            white = !white;
+        }
     }
+
 
     while (true) {
         cin >> s;
@@ -52,7 +86,7 @@ int main() {
             board.move(playerMove);
 
             Move aiMove = ai.makeMove();
-            cout << parseMove(aiMove) << std::endl;
+            cout << aiMove.toString() << std::endl;
         }
     }
 }
