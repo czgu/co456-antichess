@@ -54,6 +54,7 @@ int main() {
     ChessBoard board;
     Player ai(white, &board);
     Player ai2(!white, &board);
+#if 0
     while (true) {
         cin >> s;
         if (s == "b") {
@@ -72,6 +73,7 @@ int main() {
             white = !white;
         }
     }
+#endif
 
 
     while (true) {
