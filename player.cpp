@@ -9,14 +9,16 @@ double evaluateMove(ChessBoard& board, Move& m) {
     double black = 0;
 
     board.move(m);
-        for (int x = 0; i < 8; i++) {
-            for (int y = 0; j < 8; j++) {
-                ChessPieceType type = board[p.x][p.y]->type;
+        for (int x = 0; x < 8; x++) {
+            for (int y = 0; y < 8; y++) {
+                ChessPiece* piece = board.getPiece(vec2(x, y));
+                //ChessPieceType type = board[x][y]->type;
+                //double* score = (
             }
         }
     board.unmove();
     
-    if (board.white) {
+    if (board.isWhite()) {
         return white - black;
     }
     return black - white;

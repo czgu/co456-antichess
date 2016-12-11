@@ -85,6 +85,9 @@ public:
     void print();
 
     void identifyMoveType(Move& m);
+
+    bool isWhite() const;
+    ChessPiece* getPiece(vec2 pos);
 private:
     void genPieceMove(std::vector<Move>& moves, vec2 p);
     void genPieceDirectedMove(std::vector<Move>& moves, vec2 from, vec2 d, bool multi);

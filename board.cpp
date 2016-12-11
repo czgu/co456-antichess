@@ -356,6 +356,17 @@ void ChessBoard::identifyMoveType(Move& m) {
     m.moveType = moveType;
 }
 
+bool ChessBoard::isWhite() const {
+    return white;
+}
+
+ChessPiece* ChessBoard::getPiece(vec2 pos) {
+    if (!pos.within()) {
+        return nullptr;
+    }
+    return board[pos.x][pos.y];
+}
+
 void ChessBoard::move(Move m) {
     previousMeta.push_back(meta);
 
