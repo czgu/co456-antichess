@@ -1,7 +1,7 @@
 #pragma once
 
 #include "board.hpp"
-#define SEARCH_DEPTH 5
+#define SEARCH_DEPTH 6
 
 class Player {
 public:

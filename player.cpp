@@ -65,21 +65,27 @@ double Player::negmaxAlphaBeta(ChessBoard& board, int depth, double alpha, doubl
     }
 
     vector<Move> moves = board.genMoves();
+
     double best = -DBL_MAX, temp;
+    bool white = board.isWhite();
 
     for (Move& m : moves) {
         board.move(m);
 
-        quiescent = (m.moveType & CAPTURE);
-        temp = -negmaxAlphaBeta(board, depth - 1, -beta, -alpha, quiescent);
-        board.unmove();
+        if (!board.inCheck(white)) {
+            quiescent = (m.moveType & CAPTURE);
+            temp = -negmaxAlphaBeta(board, depth - 1, -beta, -alpha, quiescent);
 
-        if (temp > best) {
-            best = temp;
-            if (temp > alpha) {
-                alpha = temp;
+            if (temp > best) {
+                best = temp;
+                if (temp > alpha) {
+                    alpha = temp;
+                }
             }
         }
+
+        board.unmove();
+
 
         if (alpha >= beta) {
             break;
@@ -99,27 +105,38 @@ Move Player::makeMove() {
     double best = -DBL_MAX, temp;
     double alpha = -DBL_MAX;
     for (Move& m : moves) {
+        temp = -DBL_MAX;
         board->move(m);
-        bool quiescent = (m.moveType & CAPTURE);
-        temp = -negmaxAlphaBeta(*board, SEARCH_DEPTH, -DBL_MAX, -alpha, quiescent);
 
-        if (temp > best) {
-            best = temp;
-            bestMoves.clear();
+        if (!board->inCheck(this->white)) {
+            bool quiescent = (m.moveType & CAPTURE);
+            temp = -negmaxAlphaBeta(*board, SEARCH_DEPTH, -DBL_MAX, -alpha, quiescent);
+
+            if (temp > best) {
+                best = temp;
+                bestMoves.clear();
+            }
+
+            if (temp > alpha) {
+                alpha = temp;
+            }
+
+            if (temp == best) {
+                bestMoves.push_back(m);
+            }
         }
-
-        if (temp > alpha) {
-            alpha = temp;
-        }
-
-        if (temp == best) {
-            bestMoves.push_back(m);
-        }
-
         board->unmove();
     }
 
-    cout << "[" << white << "] Score : " << best << endl;
+    if (bestMoves.size() == 0) {
+        if (this->white) {
+            cout << "0-1" << endl;
+        } else {
+            cout << "1-0" << endl;
+        }
+    }
+
+    // cout << "[" << white << "] Score : " << best << endl;
     Move move = bestMoves[rand() % bestMoves.size()];
 
     num_moves++;

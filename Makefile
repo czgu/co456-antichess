@@ -5,7 +5,7 @@ MACCC=clang++
 # 
 LINUXFLAGS=-pthread
 MACFLAGS=-stdlib=libc++
-SHAREDFLAGS= -Wall -std=c++11 -Wno-c++11-extensions
+SHAREDFLAGS= -Wall -std=c++11 -Wno-c++11-extensions -g
 
 FILES=main board search player
 SOURCES=$(FILES:=.cpp)

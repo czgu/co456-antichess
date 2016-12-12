@@ -61,9 +61,9 @@ int main() {
     if (s == "both") {
         s = "n";
         while (true) {
-            //cin >> s;
+            // cin >> s;
             if (s == "b") {
-                cout << "UnMove" << endl;
+                //cout << "UnMove" << endl;
                 board.unmove();
                 // board.print();
             } else if (s == "n") {

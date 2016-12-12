@@ -71,14 +71,6 @@ string Move::toString() {
     return ret;
 }
 
-void ChessBoard::addGenMove(std::vector<Move>& moves, Move& m) {
-    move(m);
-        if (!isCheck(!white)) {
-            moves.push_back(m);
-        }
-    unmove();
-}
-
 void ChessBoard::genPieceDirectedMove(std::vector<Move>& moves, vec2 from, vec2 d, bool multi) {
     ChessPieceType type = board[from.x][from.y]->type;
     vec2 dir = d;
@@ -126,8 +118,7 @@ void ChessBoard::genPieceDirectedMove(std::vector<Move>& moves, vec2 from, vec2 
             m.promotion = QUEEN;
         }
 
-        addGenMove(moves, m);
-        //moves.push_back(m);
+        moves.push_back(m);
 
         if (cp != 0) { // Caputre Move
             break;
@@ -184,7 +175,7 @@ void ChessBoard::genPieceMove(std::vector<Move>& moves, vec2 p) {
 
             int side = white ? 0 : 1;
             int num = p.x == 0 ? 0 : 1;
-            if (meta.castling[side][num]) {
+            if (!meta.inCheck[side] && meta.castling[side][num]) {
                 // check empty
                 int x = num == 0 ? 1 : 6;
                 int y = white ? 0 : 7;
@@ -199,9 +190,7 @@ void ChessBoard::genPieceMove(std::vector<Move>& moves, vec2 p) {
                 }
 
                 if (canCastling) {
-                    //moves.push_back(Move(vec2(4, p.y), vec2(num == 0 ? 2 : 6 ,p.y), CASTLING));
-                    Move m(vec2(4, p.y), vec2(num == 0 ? 2 : 6 ,p.y), CASTLING);
-                    addGenMove(moves, m);
+                    moves.push_back(Move(vec2(4, p.y), vec2(num == 0 ? 2 : 6 ,p.y), CASTLING));
                 }
             }
             break;
@@ -236,10 +225,7 @@ void ChessBoard::genPieceMove(std::vector<Move>& moves, vec2 p) {
             if (meta.enPassant[ep] >= 0 && ((white && p.y == 4) || (!white && p.y == 3))) {
                 if (p.x + 1 == meta.enPassant[ep] || p.x - 1 == meta.enPassant[ep]) {
                     int y = white ? 5 : 2;
-                    //moves.push_back(Move(vec2(p.x, p.y), vec2(meta.enPassant[ep], y), ENPASSANT | CAPTURE));
-                    Move m(vec2(p.x, p.y), 
-                           vec2(meta.enPassant[ep], y), ENPASSANT | CAPTURE);
-                    addGenMove(moves, m);
+                    moves.push_back(Move(vec2(p.x, p.y), vec2(meta.enPassant[ep], y), ENPASSANT | CAPTURE));
                 }
             }
             // Side moves
@@ -322,13 +308,14 @@ ChessBoard::ChessBoard() {
     meta.castling[1][0] = true;
     meta.castling[1][1] = true;
 
-    meta.checkMate[0] = false;
-    meta.checkMate[1] = false;
+    meta.inCheck[0] = false;
+    meta.inCheck[1] = false;
 
     meta.enPassant[0] = -1;
     meta.enPassant[1] = -1;
 
-    king_pos_cached = INVALID_POS;
+    meta.king_pos[0] = vec2(4,0);
+    meta.king_pos[1] = vec2(4,7);
 }
 
 bool ChessBoard::check_direction(const vec2 king, const bool side,
@@ -358,7 +345,7 @@ bool ChessBoard::check_direction(const vec2 king, const bool side,
     return false;
 }
 
-static vec2 knight_positions[] = {
+const static vec2 knight_positions[] = {
     vec2(2, 1), vec2(1, 2),
     vec2(-2, 1), vec2(-1, 2),
     vec2(-2, -1), vec2(-1, -2),
@@ -366,7 +353,7 @@ static vec2 knight_positions[] = {
 };
 
 bool ChessBoard::check_knight(const vec2 king, const bool side) {
-    for (vec2& move : knight_positions) {
+    for (const vec2& move : knight_positions) {
         vec2 pos = king.add(move);
         if (pos.within()) {
             ChessPiece* piece = getPiece(pos);
@@ -401,10 +388,6 @@ bool ChessBoard::check_pawn(const vec2 king, const bool white) {
     return false;
 }
 
-static inline bool is_king(ChessPiece* king, bool white) {
-    return king != nullptr && king->type == KING && king->white == white;
-}
-
 // returns position of enemy king, if within check of this king
 bool ChessBoard::check_king(const vec2 king, const bool side) {
     //cerr << "check king\n";
@@ -425,45 +408,12 @@ bool ChessBoard::check_king(const vec2 king, const bool side) {
     }
     return false;
 }
-vec2 ChessBoard::find_king(bool white) {
-    ChessPiece* king = getPiece(king_pos_cached);
-
-    if (!is_king(king, white)) {
-        // search 5x5 region around previously known location first
-        for (int x = king_pos_cached.x - 2; x <= king_pos_cached.x + 2; x++) {
-            for (int y = king_pos_cached.y - 2; y <= king_pos_cached.y + 2; y++) {
-                vec2 pos(x, y);
-                if (!pos.within()) continue;
-
-                ChessPiece* piece = getPiece(pos);
-                if (is_king(piece, white)) {
-                    king_pos_cached = pos;
-                    return king_pos_cached;
-                }
-            }
-        }
-
-        //cerr << "search for king\n";
-        for (int x = 0; x < 8; x++) {
-            for (int y = 0; y < 8; y++) {
-                vec2 pos(x, y);
-                ChessPiece* king = getPiece(pos);
-
-                if (is_king(king, white)) {
-                    king_pos_cached = pos;
-                    return king_pos_cached;
-                }
-            }
-        }
-    }
-    return king_pos_cached;
-}
 
 bool ChessBoard::isCheck(bool white) {
     bool check(false);
 
     // find the white king
-    vec2 pos = find_king(white);
+    vec2 pos = meta.king_pos[white ? 0 : 1];
 
     check = check_direction(pos, white, vec2(1, 0), CASTLE);
     if (check) return check;
@@ -491,7 +441,6 @@ bool ChessBoard::isCheck(bool white) {
 }
 
 vector<Move> ChessBoard::genMoves() {
-    //cerr << "genMoves\n" << endl;
     vector<Move> ret;
 
     for (int i = 0; i < 8; i++) {
@@ -526,7 +475,7 @@ vector<Move> ChessBoard::genMoves() {
 void ChessBoard::valueMove(Move& m) {
     int score = 0;
     if (m.moveType & CAPTURE) {
-        ChessPiece* start = board[m.start.x][m.start.y];
+        // ChessPiece* start = board[m.start.x][m.start.y];
         ChessPiece* end = board[m.end.x][m.end.y];
 
         if (end == 0) { // enPassant
@@ -637,6 +586,8 @@ void ChessBoard::move(Move m) {
     if (start->type == KING) { // Once king moves, cannot do castling any more
         meta.castling[side][0] = false;
         meta.castling[side][1] = false;
+
+        meta.king_pos[side] = m.end; // Update King's position
     } else if (start->type == CASTLE && (m.start.x == 0 || m.start.x == 7)) {
         // Once castle move, cannot do castling any more
         if ((white && m.start.y == 0) || (!white && m.start.y == 7)) {
@@ -678,6 +629,8 @@ void ChessBoard::move(Move m) {
 
     board[m.end.x][m.end.y] = start;
 
+    meta.inCheck[side] = isCheck(white);
+
     white = !white;
 
     previousMoves.push_back(UnMove(
@@ -698,11 +651,6 @@ void ChessBoard::unmove() {
 
     ChessPiece* start = board[m.start.x][m.start.y];
     ChessPiece* end = board[m.end.x][m.end.y];
-
-    if (start != 0) {
-        // TODO:ASSERT
-        cerr << "WTF" << endl;
-    }
 
     board[m.end.x][m.end.y] = 0;
     board[m.start.x][m.start.y] = end;
@@ -739,4 +687,8 @@ void ChessBoard::print() {
         }
         cout << endl;
     }
+}
+
+bool ChessBoard::inCheck(bool white) {
+    return meta.inCheck[white ? 0 : 1];
 }
