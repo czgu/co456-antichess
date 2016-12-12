@@ -1,6 +1,7 @@
 #include "board.hpp"
 #include <iostream>
 #include <cmath>
+#include <algorithm>
 
 using namespace std;
 
@@ -48,6 +49,10 @@ Move::Move(vec2 start, vec2 end, short moveType) : start(start), end(end), moveT
     }
 }
 
+bool operator<(Move const & a, Move const & b) {
+    return a.score > b.score;
+}
+
 string Move::toString() {
     string ret = "";
 
@@ -55,6 +60,10 @@ string Move::toString() {
     ret += start.y + '1';
     ret += end.x + 'a';
     ret += end.y + '1';
+
+    if (moveType & PROMOTION) {
+        ret += 'Q';
+    }
 
     return ret;
 }
@@ -82,8 +91,9 @@ void ChessBoard::genPieceDirectedMove(std::vector<Move>& moves, vec2 from, vec2 
         }
 
         if (type == PAWN) {
-            if (cp != 0 && dir.x == 0) // Cannot move straight if there is an piece
+            if (cp != 0 && dir.x == 0) { // Cannot move straight if there is an piece
                 break;
+            }
 
             if (cp == 0 && dir.x != 0) // Cannot move diagonal if there is no piece
                 break;
@@ -323,7 +333,66 @@ vector<Move> ChessBoard::genMoves() {
         ret = captureMoves;
     }
 
+    for (Move& m : ret) {
+        valueMove(m);
+    }
+
+    if (ret.size() > 1 && ret[0].score > 0) {
+        std::sort(ret.begin(), ret.end());
+    }
+
     return ret;
+}
+
+void ChessBoard::valueMove(Move& m) {
+    int score = 0;
+    if (m.moveType & CAPTURE) {
+        ChessPiece* start = board[m.start.x][m.start.y];
+        ChessPiece* end = board[m.end.x][m.end.y];
+
+        if (end == 0) { // enPassant
+            score += 1; //Pawn
+        } else {
+            switch(end->type) {
+                case PAWN:
+                    score += 1;
+                    break;
+                case KNIGHT:
+                    score += 2;
+                    break;
+                case BISHOP:
+                    score += 2;
+                    break;
+                case CASTLE:
+                    score += 3;
+                    break;
+                case QUEEN:
+                    score += 4;
+                    break;
+                case KING:
+                    score += 5;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        score = score << 8;
+    }
+
+    if (m.moveType & PROMOTION) {
+        score += 3;
+    }
+
+    if (m.moveType & ENPASSANT) {
+        score += 2;
+    }
+
+    if (m.moveType & CAPTURE) {
+        score += 1;
+    }
+
+    m.score = score;
 }
 
 void ChessBoard::identifyMoveType(Move& m) {
@@ -358,6 +427,10 @@ void ChessBoard::identifyMoveType(Move& m) {
 
 bool ChessBoard::isWhite() const {
     return white;
+}
+
+void ChessBoard::setWhite(bool white) {
+    this->white = white;
 }
 
 ChessPiece* ChessBoard::getPiece(vec2 pos) {

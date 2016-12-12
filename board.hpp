@@ -53,6 +53,8 @@ struct Move {
     std::string toString();
 };
 
+bool operator<(Move const & a, Move const & b);
+
 struct UnMove {
     vec2 start;
     vec2 end;
@@ -86,8 +88,11 @@ public:
     void print();
 
     void identifyMoveType(Move& m);
+    void valueMove(Move& m);
 
     bool isWhite() const;
+    void setWhite(bool white);
+
     ChessPiece* getPiece(vec2 pos);
 private:
     void genPieceMove(std::vector<Move>& moves, vec2 p);

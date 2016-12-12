@@ -43,7 +43,17 @@ double Player::evaluateBoard(ChessBoard& board) {
         }
     }
 
-    if (board.isWhite()) {
+    // mobility
+    bool color = board.isWhite();
+    if (abs(black - white) < 2) {
+        board.setWhite(true);
+        white += 0.1 * board.genMoves().size();
+        board.setWhite(false);
+        black += 0.1 * board.genMoves().size();
+        board.setWhite(color);
+    }
+
+    if (color) {
         return white - black;
     }
     return black - white;
@@ -53,7 +63,6 @@ double Player::negmaxAlphaBeta(ChessBoard& board, int depth, double alpha, doubl
     if ((depth <= 0 && !quiescent) || depth < -2) {
         return evaluateBoard(board);
     }
-
 
     vector<Move> moves = board.genMoves();
     double best = -DBL_MAX, temp;

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstdio>
 #include <string>
+#include <ctime>
 #include "board.hpp"
 #include "player.hpp"
 
@@ -47,6 +48,8 @@ Move parseString(string in) {
 }
 
 int main() {
+    srand(time(0));
+
     string s;
     cin >> s;
 
@@ -55,8 +58,9 @@ int main() {
     Player ai(white, &board);
     Player ai2(!white, &board);
 #if 1
+    s = "n";
     while (true) {
-        cin >> s;
+        //cin >> s;
         if (s == "b") {
             cout << "UnMove" << endl;
             board.unmove();
