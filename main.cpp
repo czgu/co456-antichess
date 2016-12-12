@@ -60,7 +60,7 @@ int main() {
 
     if (s == "both") {
         s = "n";
-        while (true) {
+        while (!ai.surrender && !ai2.surrender) {
             // cin >> s;
             if (s == "b") {
                 //cout << "UnMove" << endl;
@@ -69,15 +69,20 @@ int main() {
             } else if (s == "n") {
                 if (white) {
                     Move aiMove = ai.makeMove();
-                    cout << aiMove.toString() << std::endl;
+                    if (!ai.surrender) {
+                        cout << aiMove.toString() << std::endl;
+                    }
                 } else {
                     Move aiMove = ai2.makeMove();
-                    cout << aiMove.toString() << std::endl;
+                    if (!ai2.surrender) {
+                        cout << aiMove.toString() << std::endl;
+                    }
                 }
                 board.print();
                 white = !white;
             }
         }
+        return 0;
     }
 
     if (white) {
@@ -85,7 +90,7 @@ int main() {
         cout << aiMove.toString() << std::endl;
     }
 
-    while (true) {
+    while (!ai.surrender) {
         cin >> s;
         if (s[0] == '$') {
             char command = s[1];
@@ -99,7 +104,9 @@ int main() {
             board.move(playerMove);
 
             Move aiMove = ai.makeMove();
-            cout << aiMove.toString() << std::endl;
+            if (!ai.surrender) {
+                cout << aiMove.toString() << std::endl;
+            }
         }
     }
 }

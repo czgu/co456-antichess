@@ -9,6 +9,8 @@ public:
     Move makeMove();
     double evaluateBoard(ChessBoard& board);
     double negmaxAlphaBeta(ChessBoard& board, int depth, double alpha, double beta, bool quiescent);
+
+    bool surrender;
 private:
     bool white;
     ChessBoard* board;

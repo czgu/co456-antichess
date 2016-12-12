@@ -96,6 +96,7 @@ double Player::negmaxAlphaBeta(ChessBoard& board, int depth, double alpha, doubl
 }
 
 Player::Player(bool white, ChessBoard* board) : white(white), board(board), num_moves(0) {
+    surrender = false;
 }
 
 Move Player::makeMove() {
@@ -128,12 +129,14 @@ Move Player::makeMove() {
         board->unmove();
     }
 
-    if (bestMoves.size() == 0) {
+    if (surrender || bestMoves.size() == 0) {
+        surrender = true;
         if (this->white) {
             cout << "0-1" << endl;
         } else {
             cout << "1-0" << endl;
         }
+        return Move(vec2(0,0), vec2(0,0));
     }
 
     // cout << "[" << white << "] Score : " << best << endl;
