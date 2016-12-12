@@ -2,21 +2,48 @@
 #include  <random>
 #include  <vector>
 
+#include <iostream>
 using namespace std;
 
-double evaluateMove(ChessBoard& board, Move& m) {
+double evaluateBoard(ChessBoard& board) {
     double white = 0;
     double black = 0;
 
-    board.move(m);
-        for (int x = 0; x < 8; x++) {
-            for (int y = 0; y < 8; y++) {
-                ChessPiece* piece = board.getPiece(vec2(x, y));
-                //ChessPieceType type = board[x][y]->type;
-                //double* score = (
+    for (int x = 0; x < 8; x++) {
+        for (int y = 0; y < 8; y++) {
+            ChessPiece* piece = board.getPiece(vec2(x, y));
+            if (piece == nullptr) {
+                cerr << "evaluateBoard: nullptr" << endl;
+                continue;
+            }
+            if (piece->type == EMPTY) {
+                continue;
+            }
+            double* score = (piece->white)? &white : &black;
+            switch(piece->type) {
+                case KING:
+                    *score += 200;
+                    break;
+                case QUEEN:
+                    *score += 9;
+                    break;
+                case CASTLE:
+                    *score += 5;
+                    break;
+                case BISHOP:
+                    *score += 3;
+                    break;
+                case KNIGHT:
+                    *score += 3;
+                    break;
+                case PAWN:
+                    *score += 1;
+                    break;
+                default:
+                    break;
             }
         }
-    board.unmove();
+    }
     
     if (board.isWhite()) {
         return white - black;
