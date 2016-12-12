@@ -97,15 +97,21 @@ Move Player::makeMove() {
     vector<Move> bestMoves;
 
     double best = -DBL_MAX, temp;
+    double alpha = -DBL_MAX;
     for (Move& m : moves) {
         board->move(m);
         bool quiescent = (m.moveType & CAPTURE);
-        temp = -negmaxAlphaBeta(*board, SEARCH_DEPTH, -DBL_MAX, DBL_MAX, quiescent);
+        temp = -negmaxAlphaBeta(*board, SEARCH_DEPTH, -DBL_MAX, -alpha, quiescent);
 
         if (temp > best) {
             best = temp;
             bestMoves.clear();
         }
+
+        if (temp > alpha) {
+            alpha = temp;
+        }
+
         if (temp == best) {
             bestMoves.push_back(m);
         }
@@ -113,7 +119,7 @@ Move Player::makeMove() {
         board->unmove();
     }
 
-    // cout << "[" << white << "] Score : " << best << endl;
+    cout << "[" << white << "] Score : " << best << endl;
     Move move = bestMoves[rand() % bestMoves.size()];
 
     num_moves++;
