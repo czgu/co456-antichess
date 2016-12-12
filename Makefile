@@ -3,8 +3,9 @@ OS := $(shell uname)
 LINUXCC=g++
 MACCC=clang++
 # 
-LINUXFLAGS=-Wall -std=c++11 -pthread
-MACFLAGS=-Wall -std=c++11 -stdlib=libc++
+LINUXFLAGS=-pthread
+MACFLAGS=-stdlib=libc++
+SHAREDFLAGS= -Wall -std=c++11 -Wno-c++11-extensions
 
 FILES=main board search player
 SOURCES=$(FILES:=.cpp)
@@ -22,11 +23,11 @@ endif
 
 all: $(SOURCES) $(EXECUTABLES)
 
-%.o:%.cc
-	$(CC) $(FLAGS) -c $< -o $@
+%.o:%.cpp
+	$(CC) $(FLAGS) $(SHAREDFLAGS) -c $< -o $@
 
 $(EXECUTABLES): $(OBJECTS)
-	$(CC) $(OBJECTS) $(FLAGS) -o $(EXECUTABLES)
+	$(CC) $(OBJECTS) $(FLAGS) $(SHAREDFLAGS) -o $(EXECUTABLES)
 
 
 clean:

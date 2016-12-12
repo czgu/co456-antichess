@@ -113,7 +113,7 @@ Move Player::makeMove() {
         board->unmove();
     }
 
-    cout << "[" << white << "] Score : " << best << endl;
+    // cout << "[" << white << "] Score : " << best << endl;
     Move move = bestMoves[rand() % bestMoves.size()];
 
     num_moves++;

@@ -57,27 +57,28 @@ int main() {
     ChessBoard board;
     Player ai(white, &board);
     Player ai2(!white, &board);
-#if 1
-    s = "n";
-    while (true) {
-        //cin >> s;
-        if (s == "b") {
-            cout << "UnMove" << endl;
-            board.unmove();
-            // board.print();
-        } else if (s == "n") {
-            if (white) {
-                Move aiMove = ai.makeMove();
-                cout << aiMove.toString() << std::endl;
-            } else {
-                Move aiMove = ai2.makeMove();
-                cout << aiMove.toString() << std::endl;
+
+    if (s == "both") {
+        s = "n";
+        while (true) {
+            //cin >> s;
+            if (s == "b") {
+                cout << "UnMove" << endl;
+                board.unmove();
+                // board.print();
+            } else if (s == "n") {
+                if (white) {
+                    Move aiMove = ai.makeMove();
+                    cout << aiMove.toString() << std::endl;
+                } else {
+                    Move aiMove = ai2.makeMove();
+                    cout << aiMove.toString() << std::endl;
+                }
+                board.print();
+                white = !white;
             }
-            board.print();
-            white = !white;
         }
     }
-#endif
 
     if (white) {
         Move aiMove = ai.makeMove();
