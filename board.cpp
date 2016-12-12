@@ -3,7 +3,13 @@
 #include <cmath>
 #include <algorithm>
 
+#include <thread>
+#include <future>
+
+#include <assert.h>
 using namespace std;
+
+static vec2 INVALID_POS(-1, -1);
 
 vec2::vec2() : x(0), y(0) {}
 vec2::vec2(short x, short y) : x(x), y(y) {}
@@ -27,7 +33,7 @@ void vec2::neg() {
     y = -y;
 }
 
-bool vec2::within() {
+bool vec2::within() const {
     if (x < 8 && y < 8 && x >= 0 && y >= 0) {
         return true;
     }
@@ -66,6 +72,14 @@ string Move::toString() {
     }
 
     return ret;
+}
+
+void ChessBoard::addGenMove(std::vector<Move>& moves, Move& m) {
+    move(m);
+        if (!isCheck(!white)) {
+            moves.push_back(m);
+        }
+    unmove();
 }
 
 void ChessBoard::genPieceDirectedMove(std::vector<Move>& moves, vec2 from, vec2 d, bool multi) {
@@ -115,7 +129,8 @@ void ChessBoard::genPieceDirectedMove(std::vector<Move>& moves, vec2 from, vec2 
             m.promotion = QUEEN;
         }
 
-        moves.push_back(m);
+        addGenMove(moves, m);
+        //moves.push_back(m);
 
         if (cp != 0) { // Caputre Move
             break;
@@ -187,7 +202,9 @@ void ChessBoard::genPieceMove(std::vector<Move>& moves, vec2 p) {
                 }
 
                 if (canCastling) {
-                    moves.push_back(Move(vec2(4, p.y), vec2(num == 0 ? 2 : 6 ,p.y), CASTLING));
+                    //moves.push_back(Move(vec2(4, p.y), vec2(num == 0 ? 2 : 6 ,p.y), CASTLING));
+                    Move m(vec2(4, p.y), vec2(num == 0 ? 2 : 6 ,p.y), CASTLING);
+                    addGenMove(moves, m);
                 }
             }
             break;
@@ -222,7 +239,10 @@ void ChessBoard::genPieceMove(std::vector<Move>& moves, vec2 p) {
             if (meta.enPassant[ep] >= 0 && ((white && p.y == 4) || (!white && p.y == 3))) {
                 if (p.x + 1 == meta.enPassant[ep] || p.x - 1 == meta.enPassant[ep]) {
                     int y = white ? 5 : 2;
-                    moves.push_back(Move(vec2(p.x, p.y), vec2(meta.enPassant[ep], y), ENPASSANT | CAPTURE));
+                    //moves.push_back(Move(vec2(p.x, p.y), vec2(meta.enPassant[ep], y), ENPASSANT | CAPTURE));
+                    Move m(vec2(p.x, p.y), 
+                           vec2(meta.enPassant[ep], y), ENPASSANT | CAPTURE);
+                    addGenMove(moves, m);
                 }
             }
             // Side moves
@@ -310,83 +330,52 @@ ChessBoard::ChessBoard() {
 
     meta.enPassant[0] = -1;
     meta.enPassant[1] = -1;
+
+    king_pos_cached = INVALID_POS;
 }
 
-/*
-bool ChessBoard::check_horizontal(const vec2 king, const bool side) {
-    //ChessPiece* king_piece = getPiece(king);
-    //bool my_side = king_piece->white;
-    for (int i = king.x + 1; i < 8; i++) {
-        ChessPiece* piece = getPiece(vec2(i, king.y));
-        if (piece->type == EMPTY) {
-            // nothing to see, move on
-            continue;
-        }
-        if (piece->white == side) {
-            // this direction is blocked by own piece
-            break;
-        }
-        switch (piece->type) {
-            case QUEEN:
-            case CASTLE:
-                return true;
-            default:
-                break;
-        }
-    }
-    for (int i = king.x - 1; i >= 0; i--) {
-        ChessPiece* piece = getPiece(vec2(i, king.y));
-        if (piece->type == EMPTY) {
-            // nothing to see, move on
-            continue;
-        }
-        if (piece->white == side) {
-            // this direction is blocked by own piece
-            break;
-        }
-        switch (piece->type) {
-            case QUEEN:
-            case CASTLE:
-                return true;
-            default:
-                break;
-        }
-    }
-    return false;
-}*/
 bool ChessBoard::check_direction(const vec2 king, const bool side,
                                  const vec2 incr, const ChessPieceType TYPE) {
+    //cerr << "check direction\n";
     for (vec2 pos = king.add(incr); pos.within(); pos = pos.add(incr)) {
         ChessPiece* piece = getPiece(pos);
-        if (piece->type == EMPTY) {
+        if (piece == nullptr || piece->type == EMPTY) {
             // nothing to see, move on
+            //cerr << "empty\n";
             continue;
         }
         if (piece->white == side) {
             // this direction is blocked by own piece
-            break;
+            //cerr << "block\n";
+            return false;
+            //break;
         }
         if (piece->type == QUEEN || piece->type == TYPE) {
+            //cerr << "enemy in check\n";
             return true;
         }
+        // enemy in non-threatening direction
+        return false;
+        //cerr << "unknown " << piece->toString() << std::endl;
     }
     return false;
 }
+
+static vec2 knight_positions[] = {
+    vec2(2, 1), vec2(1, 2),
+    vec2(-2, 1), vec2(-1, 2),
+    vec2(-2, -1), vec2(-1, -2),
+    vec2(2, -1), vec2(1, -2)
+};
+
 bool ChessBoard::check_knight(const vec2 king, const bool side) {
-    vector<vec2> knight_pos;
-    knight_pos.push_back(vec2(2, 1));
-    knight_pos.push_back(vec2(1, 2));
-    knight_pos.push_back(vec2(-2, 1));
-    knight_pos.push_back(vec2(-1, 2));
-
-    knight_pos.push_back(vec2(-2, -1));
-    knight_pos.push_back(vec2(-1, -2));
-    knight_pos.push_back(vec2(2, -1));
-    knight_pos.push_back(vec2(1, -2));
-
-    for (vec2& pos : knight_pos) {
+    for (vec2& move : knight_positions) {
+        vec2 pos = king.add(move);
         if (pos.within()) {
             ChessPiece* piece = getPiece(pos);
+            if (piece == nullptr) {
+                continue;
+            }
             if (piece->type == KNIGHT && piece->white == !side) {
                 return true;
             }
@@ -396,95 +385,123 @@ bool ChessBoard::check_knight(const vec2 king, const bool side) {
 
 }
 bool ChessBoard::check_pawn(const vec2 king, const bool white) {
-    int y = white? 1 : -1;
+    //cerr << "check pawn\n";
+    int y = white? king.y + 1 : king.y - 1;
     vec2 pos1(king.x - 1, y);
     if (pos1.within()) {
         ChessPiece* piece = getPiece(pos1);
-        if (piece->type == PAWN && piece->white == !white) {
+        if (piece != nullptr && piece->type == PAWN && piece->white == !white) {
             return true;
         }
     }
     vec2 pos2(king.x + 1, y);
     if (pos2.within()) {
         ChessPiece* piece = getPiece(pos2);
-        if (piece->type == PAWN && piece->white == !white) {
+        if (piece != nullptr && piece->type == PAWN && piece->white == !white) {
             return true;
         }
     }
     return false;
 }
 
-// returns whether enemy king is within check of this king
+static inline bool is_king(ChessPiece* king, bool white) {
+    return king != nullptr && king->type == KING && king->white == white;
+}
+
+// returns position of enemy king, if within check of this king
 bool ChessBoard::check_king(const vec2 king, const bool side) {
+    //cerr << "check king\n";
     for (int x = king.x - 1; x <= king.x + 1; x++) {
         for (int y = king.y - 1; y <= king.y + 1; y++) {
             vec2 pos(x, y);
             if (!pos.within()) continue;
 
             ChessPiece* piece = getPiece(pos);
+            if (piece == nullptr) {
+                continue;
+            }
             if (piece->type == KING && piece->white == !side) {
                 return true;
+                //return pos;
             }
         }
     }
     return false;
 }
-bool ChessBoard::isCheck(bool white) {
-    bool check(false);
-    for (int x = 0; x < 8; x++) {
-        for (int y = 0; y < 8; y++) {
-            vec2 pos(x, y);
-            ChessPiece* king = getPiece(pos);
+vec2 ChessBoard::find_king(bool white) {
+    ChessPiece* king = getPiece(king_pos_cached);
 
-            // find the white king
-            if (king->type != KING || king->white == white) {
-                continue;
+    if (!is_king(king, white)) {
+        // search 5x5 region around previously known location first
+        for (int x = king_pos_cached.x - 2; x <= king_pos_cached.x + 2; x++) {
+            for (int y = king_pos_cached.y - 2; y <= king_pos_cached.y + 2; y++) {
+                vec2 pos(x, y);
+                if (!pos.within()) continue;
+
+                ChessPiece* piece = getPiece(pos);
+                if (is_king(piece, white)) {
+                    king_pos_cached = pos;
+                    return king_pos_cached;
+                }
             }
-            check = check_direction(pos, white, vec2(1, 0), CASTLE);
-            if (check) return check;
-            check = check_direction(pos, white, vec2(-1, 0), CASTLE);
-            if (check) return check;
-            check = check_direction(pos, white, vec2(0, 1), CASTLE);
-            if (check) return check;
-            check = check_direction(pos, white, vec2(0, -1), CASTLE);
-            if (check) return check;
-            check = check_direction(pos, white, vec2(1, 1), BISHOP);
-            if (check) return check;
-            check = check_direction(pos, white, vec2(1, -1), BISHOP);
-            if (check) return check;
-            check = check_direction(pos, white, vec2(-1, 1), BISHOP);
-            if (check) return check;
-            check = check_direction(pos, white, vec2(-1, -1), BISHOP);
-            if (check) return check;
+        }
 
-            check = check_knight(pos, white);
-            if (check) return check;
-            check = check_pawn(pos, white);
-            if (check) return check;
-            check = check_king(pos, white);
-            return check;
+        //cerr << "search for king\n";
+        for (int x = 0; x < 8; x++) {
+            for (int y = 0; y < 8; y++) {
+                vec2 pos(x, y);
+                ChessPiece* king = getPiece(pos);
+
+                if (is_king(king, white)) {
+                    king_pos_cached = pos;
+                    return king_pos_cached;
+                }
+            }
         }
     }
-    cerr << "isCheck: king not found\n";
+    return king_pos_cached;
+}
+
+bool ChessBoard::isCheck(bool white) {
+    //cerr << "isCheck" << endl;
+    bool check(false);
+
+    // find the white king
+    vec2 pos = find_king(white);
+
+    check = check_direction(pos, white, vec2(1, 0), CASTLE);
+    if (check) return check;
+    check = check_direction(pos, white, vec2(-1, 0), CASTLE);
+    if (check) return check;
+    check = check_direction(pos, white, vec2(0, 1), CASTLE);
+    if (check) return check;
+    check = check_direction(pos, white, vec2(0, -1), CASTLE);
+    if (check) return check;
+    check = check_direction(pos, white, vec2(1, 1), BISHOP);
+    if (check) return check;
+    check = check_direction(pos, white, vec2(1, -1), BISHOP);
+    if (check) return check;
+    check = check_direction(pos, white, vec2(-1, 1), BISHOP);
+    if (check) return check;
+    check = check_direction(pos, white, vec2(-1, -1), BISHOP);
+    if (check) return check;
+
+    check = check_knight(pos, white);
+    if (check) return check;
+    check = check_pawn(pos, white);
+    if (check) return check;
+    check = check_king(pos, white);
     return check;
 }
 
 vector<Move> ChessBoard::genMoves() {
+    //cerr << "genMoves\n" << endl;
     vector<Move> ret;
 
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
             if (board[i][j] != NULL && white == board[i][j]->white) {
                 genPieceMove(ret, vec2(i, j));
-
-                move(ret.back());
-                    // check if this move puts you in check
-                    cerr << "check start\n";
-                    if (isCheck(!white)) {
-                        ret.pop_back();
-                    }
-                    cerr << "check end\n";
-                unmove();
             }
         }
     }
@@ -601,7 +618,7 @@ void ChessBoard::setWhite(bool white) {
 
 ChessPiece* ChessBoard::getPiece(vec2 pos) {
     if (!pos.within()) {
-        cerr << "getPiece nullptr" << endl;
+        //cerr << "getPiece nullptr" << endl;
         return nullptr;
     }
     return board[pos.x][pos.y];

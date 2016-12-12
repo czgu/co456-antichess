@@ -12,7 +12,7 @@ struct vec2 {
     vec2 add(const vec2& v) const;
     void neg();
 
-    bool within();
+    bool within() const;
 };
 
 enum ChessPieceType {
@@ -96,6 +96,7 @@ public:
 
     ChessPiece* getPiece(vec2 pos);
 private:
+    void addGenMove(std::vector<Move>& moves, Move& m);
     void genPieceMove(std::vector<Move>& moves, vec2 p);
     void genPieceDirectedMove(std::vector<Move>& moves, vec2 from, vec2 d, bool multi);
 
@@ -105,10 +106,15 @@ private:
     bool check_knight(const vec2 king, const bool side);
     bool check_pawn(const vec2 king, const bool side);
     bool check_king(const vec2 king, const bool side);
+    vec2 find_king(bool white);
+
+    bool check1(const vec2 king, const bool side);
+    bool check2(const vec2 king, const bool side);
 
     bool white;
     MetaChessBoard meta;
     ChessPiece* board[8][8];
+    vec2 king_pos_cached;
 
     std::vector<UnMove> previousMoves;
     std::vector<MetaChessBoard> previousMeta;
