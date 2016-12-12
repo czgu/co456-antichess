@@ -9,7 +9,7 @@ struct vec2 {
     vec2();
     vec2(short x, short y);
     void set(short x, short y);
-    vec2 add(vec2& v);
+    vec2 add(const vec2& v) const;
     void neg();
 
     bool within();
@@ -90,6 +90,7 @@ public:
     void identifyMoveType(Move& m);
     void valueMove(Move& m);
 
+    bool isCheck(bool white);
     bool isWhite() const;
     void setWhite(bool white);
 
@@ -97,6 +98,13 @@ public:
 private:
     void genPieceMove(std::vector<Move>& moves, vec2 p);
     void genPieceDirectedMove(std::vector<Move>& moves, vec2 from, vec2 d, bool multi);
+
+    // functions to detect whether board is in check
+    bool check_direction(const vec2 king, const bool side,
+                         const vec2 incr, const ChessPieceType TYPE);
+    bool check_knight(const vec2 king, const bool side);
+    bool check_pawn(const vec2 king, const bool side);
+    bool check_king(const vec2 king, const bool side);
 
     bool white;
     MetaChessBoard meta;
