@@ -14,11 +14,7 @@ double Player::evaluateBoard(ChessBoard& board) {
     for (int x = 0; x < 8; x++) {
         for (int y = 0; y < 8; y++) {
             ChessPiece* piece = board.getPiece(vec2(x, y));
-            if (piece == nullptr) {
-                cerr << "evaluateBoard: nullptr" << endl;
-                continue;
-            }
-            if (piece->type == EMPTY) {
+            if (piece == nullptr || piece->type == EMPTY) {
                 continue;
             }
             double* score = (piece->white)? &white : &black;
@@ -46,20 +42,16 @@ double Player::evaluateBoard(ChessBoard& board) {
             }
         }
     }
-    
+
     if (board.isWhite()) {
         return white - black;
     }
     return black - white;
 }
 
-double Player::negmaxAlphaBeta(ChessBoard& board, bool white, int depth, double alpha, double beta, bool quiescent) {
+double Player::negmaxAlphaBeta(ChessBoard& board, int depth, double alpha, double beta, bool quiescent) {
     if ((depth <= 0 && !quiescent) || depth < -2) {
-        if (white == this->white) {
-            return evaluateBoard(board);
-        } else {
-            return -evaluateBoard(board);
-        }
+        return evaluateBoard(board);
     }
 
 
@@ -70,7 +62,7 @@ double Player::negmaxAlphaBeta(ChessBoard& board, bool white, int depth, double 
         board.move(m);
 
         quiescent = (m.moveType & CAPTURE);
-        temp = -negmaxAlphaBeta(board, !white, depth - 1, -beta, -alpha, quiescent);
+        temp = -negmaxAlphaBeta(board, depth - 1, -beta, -alpha, quiescent);
         board.unmove();
 
         if (temp > best) {
@@ -80,7 +72,7 @@ double Player::negmaxAlphaBeta(ChessBoard& board, bool white, int depth, double 
             }
         }
 
-        if (alpha > beta) {
+        if (alpha >= beta) {
             break;
         }
     }
@@ -99,7 +91,7 @@ Move Player::makeMove() {
     for (Move& m : moves) {
         board->move(m);
         bool quiescent = (m.moveType & CAPTURE);
-        temp = -negmaxAlphaBeta(*board, !white, SEARCH_DEPTH, -DBL_MAX, DBL_MAX, quiescent);
+        temp = -negmaxAlphaBeta(*board, SEARCH_DEPTH, -DBL_MAX, DBL_MAX, quiescent);
 
         if (temp > best) {
             best = temp;
@@ -112,7 +104,7 @@ Move Player::makeMove() {
         board->unmove();
     }
 
-    cout << "moves.length: " << moves.size() << endl;
+    cout << "[" << white << "] Score : " << best << endl;
     Move move = bestMoves[rand() % bestMoves.size()];
     board->move(move);
 
