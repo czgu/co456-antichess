@@ -3,9 +3,6 @@
 #include <cmath>
 #include <algorithm>
 
-#include <thread>
-#include <future>
-
 #include <assert.h>
 using namespace std;
 
@@ -463,7 +460,6 @@ vec2 ChessBoard::find_king(bool white) {
 }
 
 bool ChessBoard::isCheck(bool white) {
-    //cerr << "isCheck" << endl;
     bool check(false);
 
     // find the white king
