@@ -43,6 +43,7 @@ struct Move {
     // 4 : EnPassant
     // 5 : Promotion
     short moveType;
+    int score;
 
     ChessPieceType promotion;
 

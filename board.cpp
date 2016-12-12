@@ -37,12 +37,12 @@ UnMove::UnMove(vec2 start, vec2 end, short moveType, ChessPieceType removedPiece
 : start(start), end(end), moveType(moveType), removed(removedPiece)
 {}
 
-Move::Move(vec2 start, vec2 end) : start(start), end(end) {
+Move::Move(vec2 start, vec2 end) : start(start), end(end), score(0) {
     moveType = 0;
     promotion = EMPTY;
 }
 
-Move::Move(vec2 start, vec2 end, short moveType) : start(start), end(end), moveType(moveType) {
+Move::Move(vec2 start, vec2 end, short moveType) : start(start), end(end), moveType(moveType), score(0) {
     if (moveType == 4) {
         promotion = QUEEN;
     }

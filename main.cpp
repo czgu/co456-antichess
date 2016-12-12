@@ -75,6 +75,10 @@ int main() {
     }
 #endif
 
+    if (white) {
+        Move aiMove = ai.makeMove();
+        cout << aiMove.toString() << std::endl;
+    }
 
     while (true) {
         cin >> s;
