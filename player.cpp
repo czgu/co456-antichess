@@ -45,7 +45,7 @@ double Player::evaluateBoard(ChessBoard& board) {
 
     // mobility
     bool color = board.isWhite();
-    if (abs(black - white) < 2) {
+    if (num_moves > 5 && abs(white - black) < 2) {
         board.setWhite(true);
         white += 0.1 * board.genMoves().size();
         board.setWhite(false);
@@ -89,7 +89,7 @@ double Player::negmaxAlphaBeta(ChessBoard& board, int depth, double alpha, doubl
     return best;
 }
 
-Player::Player(bool white, ChessBoard* board) : white(white), board(board) {
+Player::Player(bool white, ChessBoard* board) : white(white), board(board), num_moves(0) {
 }
 
 Move Player::makeMove() {
@@ -115,6 +115,8 @@ Move Player::makeMove() {
 
     cout << "[" << white << "] Score : " << best << endl;
     Move move = bestMoves[rand() % bestMoves.size()];
+
+    num_moves++;
     board->move(move);
 
     return move;

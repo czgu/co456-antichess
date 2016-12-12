@@ -104,5 +104,4 @@ private:
 
     std::vector<UnMove> previousMoves;
     std::vector<MetaChessBoard> previousMeta;
-
 };

@@ -10,6 +10,7 @@ public:
     double evaluateBoard(ChessBoard& board);
     double negmaxAlphaBeta(ChessBoard& board, int depth, double alpha, double beta, bool quiescent);
 private:
+    int num_moves;
     bool white;
     ChessBoard* board;
 };
